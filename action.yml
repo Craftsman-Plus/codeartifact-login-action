@@ -4,21 +4,29 @@ inputs:
   domain:
     description: CodeArtifact domain to which the package repository belongs
     required: true
-  domain-owner:
+  accountId:
     description: Owner (AWS Account) of the CodeArtifact domain
     required: true
   repository:
     description: CodeArtifact repository for which to optionally fetch the URL
     required: true
+  region:
+    description: AWS Region
+    required: false
+    default: "us-east-1"
   scope:
-    description: Configure Poetry with temporary CodeArtifact credentials
+    description: Configure tool with temporary CodeArtifact credentials
     required: false
     default: ""
+  packageType:
+    description: Tool Type
+    required: false
+    default: "npm"
 runs:
   using: "composite"
   steps:
     - name: Configure package managers
       shell: bash
       run: |
-        aws codeartifact login --tool npm --domain ${{ inputs.codeartifact-domain }} --domain-owner ${{ inputs.codeartifact-domain-owner }} --repository ${{ inputs.codeartifact-repository }} --namespace ${{ inputs.scope }}
+        aws codeartifact login --tool ${{ inputs.packageType }} --region ${{ inputs.region }} --domain ${{ inputs.domain }} --domain-owner ${{ inputs.accountId }} --repository ${{ inputs.repository }} --namespace ${{ inputs.scope }}
 
