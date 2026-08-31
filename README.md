@@ -56,3 +56,34 @@ codeartifact-token: Temporary token to authenticate with AWS CodeArtifact reposi
 codeartifact-user: Username for usage with package tools such as pip and Poetry
 codeartifact-repo-url: URL for the specified repository
 ```
+
+## Pointing the default registry at a store repository
+
+By default this action configures only the **scoped** registry (`@cmp`), so public
+packages still resolve from npmjs.com. On self-hosted runners that egress is
+charged as NAT gateway data processing — in `cmp-tools` it was the single largest
+line item, larger than all compute in the account (API-2126).
+
+Pass `defaultRepository` to also point the tool's default registry at a
+CodeArtifact repository holding an external connection to the public registry:
+
+```yaml
+- uses: Craftsman-Plus/codeartifact-login-action@v1.1.0
+  with:
+    domain: ${{ vars.CODE_ARTIFACT_NPM_REPOSITORY_DOMAIN }}
+    scope: "@cmp"
+    repository: ${{ vars.CODE_ARTIFACT_NPM_REPOSITORY_NAME }}
+    defaultRepository: npm-store
+    region: ${{ vars.AWS_REGION }}
+    accountId: ${{ vars.AWS_PROD_ACCOUNT_ID }}
+```
+
+The two logins write different `.npmrc` keys — `@cmp:registry` and `registry` —
+so our own packages keep resolving from their own repository. Verified:
+
+```
+@cmp:registry=https://<domain>.d.codeartifact.<region>.amazonaws.com/npm/cmp/
+registry=https://<domain>.d.codeartifact.<region>.amazonaws.com/npm/npm-store/
+```
+
+Omitting the input leaves behaviour exactly as before.
