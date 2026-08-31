@@ -22,6 +22,17 @@ inputs:
     description: Tool Type
     required: false
     default: "npm"
+  defaultRepository:
+    description: >-
+      CodeArtifact repository to point the tool's DEFAULT registry at — the one
+      holding an external connection to the public registry (e.g. `npm-store`).
+      Public packages then resolve through CodeArtifact inside AWS instead of
+      egressing to npmjs.com over the NAT gateway, which is the single largest
+      line item in the cmp-tools bill (API-2126). Empty = unchanged behaviour:
+      only the scoped registry is configured and public traffic still goes over
+      NAT.
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -35,4 +46,13 @@ runs:
         aws --version
         node -v
         aws codeartifact login --tool ${{ inputs.packageType }} --region ${{ inputs.region }} --domain ${{ inputs.domain }} --domain-owner ${{ inputs.accountId }} --repository ${{ inputs.repository }} --namespace ${{ inputs.scope }}
+    - name: Point the default registry at the store repository
+      # Runs SECOND and without --namespace, which is what makes it write the
+      # default `registry=` key rather than a scoped one. The two are separate
+      # npmrc keys, so the scoped login above survives untouched and our own
+      # @scope packages keep resolving from their own repository.
+      if: inputs.defaultRepository != ''
+      shell: bash
+      run: |
+        aws codeartifact login --tool ${{ inputs.packageType }} --region ${{ inputs.region }} --domain ${{ inputs.domain }} --domain-owner ${{ inputs.accountId }} --repository ${{ inputs.defaultRepository }}
 
