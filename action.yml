@@ -36,7 +36,18 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - id: aws-cli
+      # The ARC runner image already ships AWS CLI v2. Reinstalling it pulled a
+      # 74 MB zip through the NAT on every job (API-2721).
+      name: Check for AWS CLI v2
+      shell: bash
+      run: |
+        if aws --version 2>/dev/null | grep -q '^aws-cli/2\.'; then
+          echo "AWS CLI v2 already installed ($(aws --version)), skipping install"
+          echo "installed=true" >> "$GITHUB_OUTPUT"
+        fi
     - id: install-aws-cli
+      if: steps.aws-cli.outputs.installed != 'true'
       uses: unfor19/install-aws-cli-action@v1
       with:
         version: 2
